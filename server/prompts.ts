@@ -176,10 +176,18 @@ export function buildVerdictMessages(args: {
 export function parseJsonLoose<T>(raw: string): T {
   let text = raw.trim();
   text = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
-  const first = text.indexOf('{');
+  const objStart = text.indexOf('{');
+  const arrStart = text.indexOf('[');
+  // Prefer whichever delimiter appears first
+  const useArray = arrStart !== -1 && (objStart === -1 || arrStart < objStart);
+  if (useArray) {
+    const last = text.lastIndexOf(']');
+    if (last === -1 || last <= arrStart) throw new Error('Model did not return a valid JSON array.');
+    return JSON.parse(text.slice(arrStart, last + 1)) as T;
+  }
   const last = text.lastIndexOf('}');
-  if (first === -1 || last === -1 || last <= first) {
+  if (objStart === -1 || last === -1 || last <= objStart) {
     throw new Error('Model did not return a JSON object.');
   }
-  return JSON.parse(text.slice(first, last + 1)) as T;
+  return JSON.parse(text.slice(objStart, last + 1)) as T;
 }

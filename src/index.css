@@ -1,0 +1,94 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+/* Custom cybernetic designs and glassmorphic layers */
+@layer utilities {
+  .cyber-grid {
+    background-image: linear-gradient(rgba(14, 20, 36, 0.95), rgba(14, 20, 36, 0.95)),
+                      linear-gradient(rgba(59, 130, 246, 0.04) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(59, 130, 246, 0.04) 1px, transparent 1px);
+    background-size: 100% 100%, 24px 24px, 24px 24px;
+    background-repeat: no-repeat, repeat, repeat;
+  }
+  
+  .glass-dark {
+    background: rgba(13, 19, 33, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .glass-premium {
+    background: linear-gradient(135deg, rgba(20, 28, 48, 0.7) 0%, rgba(10, 15, 26, 0.8) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  }
+
+  .cyber-glow-blue {
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.15);
+  }
+
+  .cyber-glow-emerald {
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+  }
+
+  .cyber-glow-rose {
+    box-shadow: 0 0 15px rgba(244, 63, 94, 0.15);
+  }
+
+  /* Custom styled scrollbars for tech interface */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 3px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
+
+/* Custom styling for react-flow to fit our dark sci-fi aesthetic */
+.react-flow {
+  background: transparent !important;
+}
+
+.react-flow__edge-path {
+  stroke: rgba(255, 255, 255, 0.15) !important;
+  stroke-width: 2px !important;
+  transition: stroke 0.3s, stroke-width 0.3s;
+}
+
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: #3b82f6 !important;
+  stroke-width: 3px !important;
+}
+
+.react-flow__handle {
+  width: 8px !important;
+  height: 8px !important;
+  background: #3b82f6 !important;
+  border: 1px solid #1e293b !important;
+}
+
+.react-flow__attribution {
+  display: none !important;
+}

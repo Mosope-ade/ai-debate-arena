@@ -292,6 +292,38 @@ app.post('/api/verdict', verdictLimiter, async (req, res) => {
   }
 });
 
+// ─── Suggest stances for a given topic ──────────────────────────────────────
+
+app.post('/api/suggest-stances', modelsLimiter, async (req, res) => {
+  try {
+    const { topic, provider } = req.body as { topic: string; provider: string };
+    if (!topic?.trim()) return res.status(400).json({ error: 'No topic provided.' });
+    if (!VALID_PROVIDERS.has(provider)) return res.status(400).json({ error: 'Unknown provider.' });
+    const key = resolveKey(provider as ProviderId, headerKey(req));
+    const raw = await completeChat(
+      provider as ProviderId,
+      req.body.model ?? 'claude-haiku-4-5',
+      key,
+      [
+        {
+          role: 'system',
+          content: 'You generate debate positions. Return ONLY a valid JSON array of strings. No preamble, no markdown fences.',
+        },
+        {
+          role: 'user',
+          content: `Generate 4 distinct, interesting positions someone could argue in a debate about: "${topic.slice(0, 500)}". Make them specific and argumentatively rich, not just "for" and "against".`,
+        },
+      ],
+      300
+    );
+    const stances = parseJsonLoose<string[]>(raw);
+    if (!Array.isArray(stances)) throw new Error('Model did not return an array.');
+    res.json(stances.slice(0, 4).map((s: unknown) => String(s).slice(0, 200)));
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
 // ─── Static hosting / Vite dev middleware ────────────────────────────────────
 
 async function initializeServer() {

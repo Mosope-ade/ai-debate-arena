@@ -10,9 +10,10 @@ import {
   turnTotal,
 } from '../types';
 import { colorClasses, providerBadge } from '../lib/ui';
+import { buildShareUrl } from '../lib/exports';
 import ArgumentGraph from './ArgumentGraph';
 import {
-  AlertTriangle, Award, ChevronRight, Flag, Gavel, GitBranch, Loader2,
+  AlertTriangle, Award, ChevronDown, ChevronRight, Flag, Gavel, GitBranch, Link, Loader2,
   MessageSquarePlus, Minus, Pause, Play, Plus, RotateCcw, ScrollText, Star,
 } from 'lucide-react';
 
@@ -47,10 +48,12 @@ export default function Debate({
     ? participants.find((p) => p.id === nextSlot.participantId)
     : undefined;
   const totals = participantTotals(session);
+  const maxTotal = Math.max(1, ...Object.values(totals));
 
   const [view, setView] = useState<'transcript' | 'graph'>('transcript');
   const [question, setQuestion] = useState('');
   const [endModalOpen, setEndModalOpen] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -84,7 +87,7 @@ export default function Debate({
   }, [nextSlot, config.crossfire]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-5 w-full grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-5">
+    <div className="max-w-7xl mx-auto px-4 py-5 pb-16 lg:pb-5 w-full grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-5">
       {/* ── Left rail: scoreboard ─────────────────────────────────────── */}
       <aside className="space-y-3 lg:sticky lg:top-20 self-start">
         <div className="glass-dark rounded-2xl p-4">
@@ -111,7 +114,13 @@ export default function Debate({
                       <p className="text-[9px] text-slate-500 uppercase tracking-wider">points</p>
                     </div>
                   </div>
-                  <p className="mt-2 text-[11px] text-slate-400 leading-snug line-clamp-2">{p.stance}</p>
+                  <div className="mt-2 h-1 rounded-full bg-slate-800 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${c.bg}`}
+                      style={{ width: `${Math.round((totals[p.id] / maxTotal) * 100)}%`, opacity: 0.7 }}
+                    />
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-slate-400 leading-snug line-clamp-2">{p.stance}</p>
                   {(isStreaming || isNext) && (
                     <p className={`mt-2 text-[10px] font-mono uppercase tracking-widest ${isStreaming ? c.text : 'text-slate-500'}`}>
                       {isStreaming ? '● speaking now' : '○ up next'}
@@ -123,28 +132,27 @@ export default function Debate({
           </div>
         </div>
 
-        <div className="glass-dark rounded-2xl p-4">
-          <p className="text-[10px] font-mono uppercase tracking-widest text-slate-500 mb-3">Format</p>
-          <div className="space-y-1.5">
-            {phaseProgress.map((ph) => (
-              <div key={ph.phase} className="flex items-center gap-2 text-[11px]">
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    ph.state === 'done' ? 'bg-emerald-400' : ph.state === 'active' ? 'bg-indigo-400 animate-pulse' : 'bg-slate-700'
-                  }`}
-                />
-                <span className={ph.state === 'active' ? 'text-slate-200' : 'text-slate-500'}>{ph.label}</span>
-              </div>
-            ))}
-          </div>
-          <p className="mt-3 text-[11px] text-slate-500 tabular-nums">
-            Speech {Math.min(spoken + 1, schedule.length)} of {schedule.length}
-          </p>
-        </div>
       </aside>
 
       {/* ── Main stage ────────────────────────────────────────────────── */}
       <div className="min-w-0 flex flex-col">
+        {/* Phase progress pill bar */}
+        <div className="flex items-center gap-1.5 mb-3">
+          {phaseProgress.map((ph) => (
+            <div
+              key={ph.phase}
+              className={`flex-1 h-1.5 rounded-full transition-all duration-500 ${
+                ph.state === 'done' ? 'bg-indigo-500'
+                : ph.state === 'active' ? 'bg-indigo-400 animate-pulse'
+                : 'bg-slate-800'
+              }`}
+            />
+          ))}
+          <span className="text-[9px] font-mono uppercase tracking-widest text-slate-500 shrink-0 ml-1">
+            {phaseProgress.find((ph) => ph.state === 'active')?.label ?? 'Done'} · {Math.min(spoken + 1, schedule.length)}/{schedule.length}
+          </span>
+        </div>
+
         {/* View tabs */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex gap-1 p-1 rounded-xl glass-dark">
@@ -266,6 +274,17 @@ export default function Debate({
                 <Gavel className="w-3.5 h-3.5" /> Deliver the verdict
               </button>
             )}
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(buildShareUrl(session));
+                setShareCopied(true);
+                setTimeout(() => setShareCopied(false), 2000);
+              }}
+              className="px-3 py-2 rounded-xl border border-slate-700 text-slate-400 text-xs hover:border-indigo-500/50 hover:text-indigo-300 flex items-center gap-1.5 transition ml-auto"
+            >
+              <Link className="w-3.5 h-3.5" />
+              {shareCopied ? 'Copied!' : 'Share'}
+            </button>
           </div>
 
           <div className="flex gap-2">
@@ -289,6 +308,22 @@ export default function Debate({
       </div>
 
       {/* ── End-debate modal ────────────────────────────────────────────── */}
+      {/* Mobile sticky score bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 border-t border-slate-800/80 bg-slate-950/90 backdrop-blur-md px-4 py-2 flex items-center justify-around gap-2">
+        {participants.map((p) => {
+          const c = colorClasses[p.color];
+          return (
+            <div key={p.id} className="flex items-center gap-1.5 min-w-0">
+              <span className={`w-2 h-2 rounded-full shrink-0 ${c.bg}`} />
+              <span className={`text-[11px] font-mono font-medium tabular-nums ${c.text} truncate`}>
+                {p.displayName.split(' ')[0]}
+              </span>
+              <span className="text-xs text-slate-300 tabular-nums font-medium">{totals[p.id] ?? 0}</span>
+            </div>
+          );
+        })}
+      </div>
+
       {endModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => setEndModalOpen(false)}>
           <div className="glass-premium rounded-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
@@ -366,6 +401,20 @@ const LiveBubble: FC<LiveBubbleProps> = ({ speaker, text }) => {
   );
 };
 
+function friendlyJudgeError(raw: string): string {
+  const lower = raw.toLowerCase();
+  if (lower.includes('quota') || lower.includes('rate limit') || lower.includes('resource_exhausted')) {
+    return 'Judge skipped — API quota exceeded. Try a different judge model.';
+  }
+  if (lower.includes('401') || lower.includes('unauthorized') || lower.includes('api key')) {
+    return 'Judge skipped — invalid API key for the judge provider.';
+  }
+  if (lower.includes('404') || lower.includes('model not found') || lower.includes('not found')) {
+    return 'Judge skipped — judge model not found. Check the model name.';
+  }
+  return `Judge skipped — ${raw.split('.')[0].slice(0, 80)}.`;
+}
+
 interface SpeechCardProps {
   turn: Turn;
   speaker?: Participant;
@@ -377,7 +426,12 @@ const SpeechCard: FC<SpeechCardProps> = ({
 }) => {
   const c = speaker ? colorClasses[speaker.color] : colorClasses.indigo;
   const [expanded, setExpanded] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const judge = turn.judge;
+
+  useEffect(() => {
+    if (turn.judge && !turn.highlighted) setCollapsed(true);
+  }, [turn.judge, turn.highlighted]);
 
   return (
     <div className={`rounded-2xl border p-4 bg-slate-950/40 transition ${turn.highlighted ? 'border-amber-400/60 shadow-[0_0_18px_rgba(251,191,36,0.12)]' : c.border}`}>
@@ -410,10 +464,22 @@ const SpeechCard: FC<SpeechCardProps> = ({
           >
             <Plus className="w-3.5 h-3.5" />
           </button>
+          <button
+            onClick={() => setCollapsed((v) => !v)}
+            className="p-1.5 rounded-lg text-slate-600 hover:text-slate-300 hover:bg-white/5 transition"
+            title={collapsed ? 'Expand speech' : 'Collapse speech'}
+          >
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${collapsed ? '' : 'rotate-180'}`} />
+          </button>
         </div>
       </div>
 
-      <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">{turn.text}</p>
+      {!collapsed && (
+        <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">{turn.text}</p>
+      )}
+      {collapsed && turn.judge && (
+        <p className="text-xs text-slate-400 italic mt-1.5 line-clamp-2">{turn.judge.claim}</p>
+      )}
 
       {/* Judge strip */}
       <div className="mt-3 pt-3 border-t border-white/5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
@@ -423,8 +489,8 @@ const SpeechCard: FC<SpeechCardProps> = ({
           </span>
         )}
         {turn.judgeError && (
-          <span className="text-[10px] text-amber-400/90 flex items-center gap-1">
-            <AlertTriangle className="w-3 h-3" /> judge review failed: {turn.judgeError}
+          <span className="text-[10px] text-amber-400/90 flex items-center gap-1" title={turn.judgeError}>
+            <AlertTriangle className="w-3 h-3" /> {friendlyJudgeError(turn.judgeError)}
           </span>
         )}
         {judge && (

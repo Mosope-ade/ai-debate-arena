@@ -7,11 +7,12 @@ import {
   ProviderId,
   providerInfo,
 } from '../types';
-import { fetchModels } from '../lib/api';
-import { deleteSession, listSessions, SessionSummary } from '../lib/storage';
+import { fetchModels, suggestStances } from '../lib/api';
+import { buildShareUrl } from '../lib/exports';
+import { deleteSession, getKeys, listSessions, SessionSummary, loadSession } from '../lib/storage';
 import { colorClasses, PARTICIPANT_COLORS, providerBadge } from '../lib/ui';
 import {
-  Gavel, History, KeyRound, Loader2, Play, Plus, RefreshCw, Swords, Trash2, X,
+  Gavel, History, KeyRound, Link, Loader2, Play, Plus, RefreshCw, Shuffle, Sparkles, Swords, Trash2, X,
 } from 'lucide-react';
 
 interface SetupProps {
@@ -23,9 +24,17 @@ interface SetupProps {
 
 const TOPIC_PRESETS = [
   'Should advanced AI development be paused until alignment is solved?',
-  'Is remote work better than office work for software teams?',
+  'Is open-source AI more dangerous than proprietary AI?',
+  'Will AGI be net positive for humanity?',
   'Should social media platforms be liable for user-generated content?',
-  'Is nuclear energy the most realistic path to decarbonization?',
+  'Is universal basic income the right response to automation?',
+  'Should nuclear energy be the backbone of decarbonization?',
+  'Is remote work better than office work for software teams?',
+  'Should a four-day work week be the global standard?',
+  'Is consciousness substrate-independent — can AI be sentient?',
+  'Does free will exist in a deterministic universe?',
+  'Should genetic enhancement of humans be permitted?',
+  'Is lab-grown meat the future of food?',
 ];
 
 interface ParticipantDraft {
@@ -59,6 +68,8 @@ export default function Setup({ onStart, onOpenKeys, onLoadSession, keysConfigur
   const [rebuttalRounds, setRebuttalRounds] = useState(2);
   const [crossfire, setCrossfire] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
+  const [showAllPresets, setShowAllPresets] = useState(false);
+  const [stanceLoading, setStanceLoading] = useState(false);
 
   // Live model catalogs, fetched per provider with the configured key.
   const [catalogs, setCatalogs] = useState<Partial<Record<ProviderId, string[]>>>({});
@@ -183,7 +194,7 @@ export default function Setup({ onStart, onOpenKeys, onLoadSession, keysConfigur
             className="w-full px-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 text-sm"
           />
           <div className="flex flex-wrap gap-2 pt-1">
-            {TOPIC_PRESETS.map((t) => (
+            {(showAllPresets ? TOPIC_PRESETS : TOPIC_PRESETS.slice(0, 4)).map((t) => (
               <button
                 key={t}
                 type="button"
@@ -193,6 +204,20 @@ export default function Setup({ onStart, onOpenKeys, onLoadSession, keysConfigur
                 {t}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => setShowAllPresets((v) => !v)}
+              className="px-3 py-1.5 rounded-lg border border-white/5 text-[11px] text-slate-500 hover:text-slate-300 transition"
+            >
+              {showAllPresets ? 'Show less' : `+${TOPIC_PRESETS.length - 4} more`}
+            </button>
+            <button
+              type="button"
+              onClick={() => setTopic(TOPIC_PRESETS[Math.floor(Math.random() * TOPIC_PRESETS.length)])}
+              className="px-3 py-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 text-indigo-300 text-[11px] flex items-center gap-1 transition"
+            >
+              <Shuffle className="w-3 h-3" /> Random
+            </button>
           </div>
         </section>
 
@@ -202,6 +227,29 @@ export default function Setup({ onStart, onOpenKeys, onLoadSession, keysConfigur
             <label className="block text-xs font-mono tracking-wider text-slate-400 uppercase">
               Debaters ({participants.length})
             </label>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!topic.trim()) return setFormError('Enter a topic first.');
+                const availableProvider = (Object.keys(getKeys())[0] as ProviderId | undefined)
+                  ?? participants[0].provider;
+                setStanceLoading(true);
+                try {
+                  const stances = await suggestStances(topic, availableProvider);
+                  setParticipants((prev) =>
+                    prev.map((p, i) => ({ ...p, stance: stances[i] ?? p.stance }))
+                  );
+                } catch { /* silently ignore — stances are optional */ }
+                finally { setStanceLoading(false); }
+              }}
+              disabled={!topic.trim() || stanceLoading}
+              className="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed transition"
+            >
+              {stanceLoading
+                ? <Loader2 className="w-3 h-3 animate-spin" />
+                : <Sparkles className="w-3 h-3" />}
+              Suggest stances
+            </button>
             <button
               type="button"
               onClick={addParticipant}
@@ -421,18 +469,32 @@ export default function Setup({ onStart, onOpenKeys, onLoadSession, keysConfigur
                     {s.winnerName ? ` · Winner: ${s.winnerName}` : ''}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteSession(s.id);
-                    setSessions(listSessions());
-                  }}
-                  className="p-1.5 rounded-lg hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 shrink-0"
-                  aria-label="Delete saved debate"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const loaded = loadSession(s.id);
+                      if (loaded) navigator.clipboard.writeText(buildShareUrl(loaded));
+                    }}
+                    className="p-1.5 rounded-lg hover:bg-indigo-500/10 text-slate-500 hover:text-indigo-400"
+                    aria-label="Copy share link"
+                  >
+                    <Link className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteSession(s.id);
+                      setSessions(listSessions());
+                    }}
+                    className="p-1.5 rounded-lg hover:bg-rose-500/10 text-slate-500 hover:text-rose-400"
+                    aria-label="Delete saved debate"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>

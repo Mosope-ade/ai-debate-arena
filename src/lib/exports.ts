@@ -1,5 +1,6 @@
 // ─── Export utilities ───────────────────────────────────────────────────────
 
+import { deflate, inflate } from 'pako';
 import {
   participantTotals,
   PHASE_LABELS,
@@ -7,6 +8,33 @@ import {
   speechTurns,
   turnTotal,
 } from '../types';
+
+// ─── Share link encode / decode ──────────────────────────────────────────────
+
+export function encodeSession(session: Session): string {
+  const json = JSON.stringify(session);
+  const compressed = deflate(json, { level: 9 });
+  let binary = '';
+  for (let i = 0; i < compressed.length; i++) {
+    binary += String.fromCharCode(compressed[i]);
+  }
+  return btoa(binary);
+}
+
+export function decodeSession(encoded: string): Session {
+  const binary = atob(encoded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  const json = inflate(bytes, { to: 'string' });
+  return JSON.parse(json) as Session;
+}
+
+export function buildShareUrl(session: Session): string {
+  const encoded = encodeSession(session);
+  return `${window.location.origin}${window.location.pathname}#share=${encoded}`;
+}
 
 function participantName(session: Session, id?: string): string {
   return session.config.participants.find((p) => p.id === id)?.displayName ?? 'Unknown';

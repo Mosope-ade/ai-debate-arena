@@ -178,3 +178,13 @@ export async function requestVerdict(args: {
   });
   return jsonOrThrow(res);
 }
+
+export async function suggestStances(topic: string, provider: ProviderId): Promise<string[]> {
+  const res = await fetch('/api/suggest-stances', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...keyHeader(provider) },
+    body: JSON.stringify({ topic, provider }),
+  });
+  const body = await jsonOrThrow(res);
+  return Array.isArray(body) ? body : [];
+}

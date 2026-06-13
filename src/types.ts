@@ -165,34 +165,35 @@ export function participantTotals(session: Session): Record<string, number> {
   return totals;
 }
 
+// Fallback model IDs shown when the provider's /models endpoint is unreachable. Update periodically.
 export const PROVIDERS: ProviderInfo[] = [
   {
     id: 'openai',
     label: 'OpenAI',
     keyName: 'OPENAI_API_KEY',
     keyUrl: 'https://platform.openai.com/api-keys',
-    defaultModels: ['gpt-5.5', 'gpt-5.4', 'gpt-5.4-mini'],
+    defaultModels: ['gpt-4o', 'gpt-4o-mini', 'o1', 'o3-mini'],
   },
   {
     id: 'anthropic',
     label: 'Anthropic',
     keyName: 'ANTHROPIC_API_KEY',
     keyUrl: 'https://console.anthropic.com/settings/keys',
-    defaultModels: ['claude-fable-5', 'claude-opus-4-8', 'claude-sonnet-4-6', 'claude-haiku-4-5'],
+    defaultModels: ['claude-opus-4-8', 'claude-sonnet-4-6', 'claude-haiku-4-5'],
   },
   {
     id: 'google',
     label: 'Google',
     keyName: 'GEMINI_API_KEY',
     keyUrl: 'https://aistudio.google.com/apikey',
-    defaultModels: ['gemini-3.5-flash', 'gemini-3.1-pro-preview', 'gemini-3.1-flash-lite'],
+    defaultModels: ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash'],
   },
   {
     id: 'xai',
     label: 'xAI',
     keyName: 'XAI_API_KEY',
     keyUrl: 'https://console.x.ai',
-    defaultModels: ['grok-4.1-fast-reasoning', 'grok-4.20-reasoning'],
+    defaultModels: ['grok-3', 'grok-3-mini', 'grok-2-1212'],
   },
   {
     id: 'deepseek',
@@ -206,7 +207,7 @@ export const PROVIDERS: ProviderInfo[] = [
     label: 'Mistral',
     keyName: 'MISTRAL_API_KEY',
     keyUrl: 'https://console.mistral.ai/api-keys',
-    defaultModels: ['mistral-large-latest', 'mistral-small-latest'],
+    defaultModels: ['mistral-large-latest', 'mistral-small-latest', 'codestral-latest'],
   },
   {
     id: 'openrouter',
@@ -214,10 +215,10 @@ export const PROVIDERS: ProviderInfo[] = [
     keyName: 'OPENROUTER_API_KEY',
     keyUrl: 'https://openrouter.ai/settings/keys',
     defaultModels: [
-      'openai/gpt-5.5',
-      'anthropic/claude-sonnet-4.6',
-      'google/gemini-3.5-flash',
-      'deepseek/deepseek-chat-v3.1',
+      'openai/gpt-4o',
+      'anthropic/claude-sonnet-4-6',
+      'google/gemini-2.5-flash-preview',
+      'deepseek/deepseek-chat-v3-0324',
       'meta-llama/llama-4-maverick',
     ],
   },

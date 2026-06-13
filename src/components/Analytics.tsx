@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Legend, Line, LineChart, PolarAngleAxis, PolarGrid, PolarRadiusAxis,
   Radar, RadarChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -6,19 +6,20 @@ import {
 import {
   participantTotals, Session, SCORE_CATEGORIES, speechTurns, turnTotal, PHASE_LABELS,
 } from '../types';
-import { debateStats, exportJson, exportMarkdown, exportPdf } from '../lib/exports';
+import { buildShareUrl, debateStats, exportJson, exportMarkdown, exportPdf } from '../lib/exports';
 import { colorClasses, providerBadge } from '../lib/ui';
 import ArgumentGraph from './ArgumentGraph';
 import {
-  AlertTriangle, Download, FileJson, FileText, Printer, RotateCcw, Star, Trophy,
+  AlertTriangle, Download, FileJson, FileText, Link, Printer, RotateCcw, Star, Trophy,
 } from 'lucide-react';
 
 interface AnalyticsProps {
   session: Session;
   onReset: () => void;
+  hideNewDebateButton?: boolean;
 }
 
-export default function Analytics({ session, onReset }: AnalyticsProps) {
+export default function Analytics({ session, onReset, hideNewDebateButton }: AnalyticsProps) {
   const { config, turns, verdict } = session;
   const totals = participantTotals(session);
   const stats = useMemo(() => debateStats(session), [session]);
@@ -75,6 +76,7 @@ export default function Analytics({ session, onReset }: AnalyticsProps) {
   }, [speeches]);
 
   const highlights = speeches.filter((t) => t.highlighted);
+  const [shareCopied, setShareCopied] = useState(false);
 
   return (
     <div className="max-w-6xl mx-auto px-4 w-full space-y-5">
@@ -272,9 +274,22 @@ export default function Analytics({ session, onReset }: AnalyticsProps) {
         <button onClick={() => exportPdf(session)} className="px-3 py-2 rounded-xl border border-slate-700 hover:border-indigo-500/50 hover:text-indigo-300 text-slate-300 text-xs flex items-center gap-1.5 transition">
           <Printer className="w-3.5 h-3.5" /> PDF
         </button>
-        <button onClick={onReset} className="ml-auto px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium flex items-center gap-1.5 transition">
-          <RotateCcw className="w-3.5 h-3.5" /> New debate
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(buildShareUrl(session));
+            setShareCopied(true);
+            setTimeout(() => setShareCopied(false), 2000);
+          }}
+          className="px-3 py-2 rounded-xl border border-slate-700 hover:border-indigo-500/50 hover:text-indigo-300 text-slate-300 text-xs flex items-center gap-1.5 transition"
+        >
+          <Link className="w-3.5 h-3.5" />
+          {shareCopied ? 'Copied!' : 'Share link'}
         </button>
+        {!hideNewDebateButton && (
+          <button onClick={onReset} className="ml-auto px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium flex items-center gap-1.5 transition">
+            <RotateCcw className="w-3.5 h-3.5" /> New debate
+          </button>
+        )}
       </div>
     </div>
   );
